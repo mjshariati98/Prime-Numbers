@@ -1,28 +1,24 @@
+# Distributed Prime Numbers Generator
 
-# برنامه محاسبه اعداد اول به صورت توزیع شده
+## Calculation Algorithm
+A prime number is a natural number greater than 1, which is only divisible by 1 and itself. To compute whether a number `n` is prime or not, A naive solution is to iterate through all numbers from 2 to sqrt(n), and for every number, check if it divides `n`. If we find any number that divides, then `n` is not prime.
 
-## الگوریتم محاسبه :‌
-برای اینکه محاسبه کنیم عدد x اول است یا نه ، بایستی آن را بر اعداد اول ۲ تا رادیکال آن عدد تقسیم کنیم، که اگر بر هیچ کدام بخش پذیر نباشد،‌ درنتیجه اول خواهد بود. برای محاسبه به صورت توزیع شده ، به هر کلاینت بازه ای از این اعداد اول را اختصاص می دهیم و هر کلاینت مسئول انجام تقسیم عدد مورد نظر بر اعداد اولی است که به او اختصاص یافته است و در نهایت سرور باتوجه به اطلاعات دریافتی از کلاینت ها تصمیم می گیرد که عدد موردنظر اول است یا نه. بدین صورت که هر کلاینت تعدادی از اعداد اول را در خود نگه می دارد و شروع به تقسیم عدد مورد نظر به اعداد اول درون بازه ای که به او اختصاص یافته می کند. اگر هیچ باقیمانده صفری ظاهر نشود، به سرور می گوید که عدد مورد نظر نسبت به اعداد اولی که او دارد اول است،‌ اما اگر بر یک عدد بخش پذیر باشد،‌ کلاینت محاسبه را متوقف کرده و به سرور اطلاع می دهد که عدد مورد نظر اول نیست . در نتیجه سرور هم به تمام کلاینت های متصل خبر می دهد که لازم به ادامه محاسبه نیست و سراغ محاسبه عدد بعدی (x+1 ) می رود. اما اگر همه کلاینت ها اعلام کنند که عدد مورد نظر اول است (هر کس نسبت به بازه خود) در نتیجه سرور آن عدد را به لیست اعداد اول خود اضافه می کند و در فایل log.txt هم ذخیره می کند و این عدد به یکی از کلاینت ها (کلاینتی که تعداد اعداد اولی که دارد کمتر از بقیه است) فرستاده میشود و کلاینت مورد نظر آن عدد را به لیست اعداد اول خودش اضافه می کند.
+To refine this solution a little bit, we can divide `n` by only prime numbers in the range [2, sqrt(n)] and not all numbers in that range (The reason is obvious, just think about the prime numbers' definition). 
+For distributed computing, we do the same to determine whether a number `n` is prime. Suppose We computed the prime numbers in the range [1, n-1] and assigned each of the prime numbers in the range [2, sqrt(n)] to one of our clients (workers). Now, if each client divides `n` by all of its devoted prime numbers and all declare that `n` is prime, Then `n` is prime. But, if only one of them declares that `n` is not prime (`n` is divisible by one of its devoted prime numbers), Then `n` is not prime.
 
-## اضافه شدن کلاینت جدید و قطع شدن ارتباط یک کلاینت
-در صورتی که یک کلاینت حین محاسبه از سرور جدا شود،‌ این مشکل هندل شده و عددی که حین محاسبه آن این اتفاق افتاده دوباره محاسبه شده و همچنین سرور اطلاعات کامل کلاینت ها را دارد. یعنی می داند که هر کلاینت چه اعداد اولی را در خود نگه می دارد. پس با قطع کلاینت مورد نظر، سرور پیش از شروع محاسبه عدد بعدی،‌ اعداد اول کلاینت قطع شده را بین کلاینت های موجود تقسیم می کند و برای آنها می فرستد. سیستم تا جایی که حداقل یک کلاینت به آن وصل باشد،‌ به محاسبه اعداد اول می پردازد و اگر همه کلاینت ها قطغ شوند،‌ منتظر اتصال کلاینت می ماند و با اتصال کلاینت محاسبه را ادامه می دهد. همچنین با متصل شدن یک کلاینت جدید به سرور، بلافاصله در فرآیند محاسبه قرار میگیرد.
+Notes:
+- If a client finds out that `n` is divisible by one of its prime numbers, the client will stop its computing process and send the result back to the server. Also, as soon as the server finds out that `n` is not prime, it will send a message to all its clients to stop their computing.
+- At the end, if all of the clients declare that `n` is prime, then the server will add `n` to its prime numbers list and save it in a file called `log.txt`. Also, this number will be assigned to the client with the minimum number of assigned prime numbers at that time.
+- If storing prime numbers in clients is not possible due to storage limitations, we can store prime numbers only in the server, and clients get the prime numbers from the server each time. This approach has a lot of communication overhead and is not recommended.
 
+## Remove a client
+If a client gets disconnected from the server, the server will find out, and the number that was computing will compute again. Also, the server keeps the state of all clients and will scatter its prime numbers to the remaining clients by disconnecting one of them.
 
-## مشکل از دست رفتن داده در صورت Down شدن سرور
-تمام اعداد اولی که محاسبه می شوند در فایل log.txt ذخیره می شود. بدین ترتیب اگر سرور از کار بیفتد،‌ میتوان با اجرا کردن دوباره سرور و دادن فایل log به آن محاسبه را ادامه داد.
-همچنین اعداد اول محاسبه شده روی کلاینت ها هم ذخیره می شود و امکان پیاده سازی این موضوع وجود دارد که سرور بعد از اجرا شدن با اتصال به کلاینت ها اعداد اولش را آپدیت کند و محاسبه را از آن جا ادامه دهد.
+## Add new clients 
+If a new client connects to the server, It will join the computing process immediately. But, rebalancing the previous prime numbers still needs to be implemented.
 
+## Data loss on server downtime
+if the server goes down, restarting it with the `log.txt` file will reload all computed prime numbers and can continue its task to find the next prime numbers. Also, it's possible to implement a mechanism to get all of the calculated prime numbers from clients rather than a log file.
 
-## نحوه اجرا
-### سرور
-برای اجرای سرور ابتدا باید پورتی که میخواهید روی آن سوکت بزنید را وارد کنید. سپس در صورتی که میخواهید محاسبه را از عدد ۲ شروع کنید گزینه ۱ را وارد کنید و اگر فایل log از قبل دارید گزینه ۲ را انتخاب و مسیر فایل را به آن بدهید. سپس انتهای بازه ای که می خواهید تا آنجا اعداد اول محاسبه شوند را وارد کنید . حال سرور منتظر اتصال کلاینت است.
-### کلاینت
-با اجرای کلاینت ابتدا ip سرور و سپس port آن را وارد کنید. در نتیجه به سرور متصل شده و محاسبه روی کلاینت شروع می شود.
-
-
-## داکر
-داکرفایل پروژه هم در کنار آن است و با build کردن  وسپس run  کردن آن  میتوان سرور و کلاینت را به صورت داکر اجرا نمود.
-
-تمرین سوم درس تکنولوزی کامپیوتر - دانشگاه صنعتی شریف - بهار ۹۸
-محمد جواد شریعتی  - 96100414 - mjshariati98@gmail.com
-
+## How to run the program
+Everything is dockerized! You just need to build and run it.
